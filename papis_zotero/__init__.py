@@ -1,16 +1,17 @@
-import click
 import os
-
-import logging
 import http.server
+from typing import Optional
+
+import click
+
 import papis_zotero.server
 
 
 @click.group("zotero")
 @click.help_option("-h", "--help")
-def main():
+def main() -> None:
     """
-    Zotero interface for papis
+    Zotero interface for papis.
     """
     pass
 
@@ -21,12 +22,16 @@ def main():
               help="Port to listen to",
               default=papis_zotero.server.zotero_port,
               type=int)
-@click.option("--address", help="Address to bind", default="localhost")
-def serve(address, port):
-    """Start a zotero-connector server"""
-    global logger
-    logging.warning("The zotero-connector server is experimental,"
-                    " please report bugs and improvements.")
+@click.option("--address",
+              help="Address to bind",
+              default="localhost")
+def serve(address: str, port: int) -> None:
+    """Start a ``zotero-connector`` server."""
+
+    logger.warning("The 'zotero-connector' server is experimental. "
+                   "Please report bugs and improvements at "
+                   "https://github.com/papis/papis-zotero/issues.")
+
     server_address = (address, port)
     httpd = http.server.HTTPServer(server_address,
                                    papis_zotero.server.PapisRequestHandler)
@@ -35,14 +40,13 @@ def serve(address, port):
 
 @main.command("import")
 @click.help_option("-h", "--help")
-@click.option(
-    "-f",
-    "--from-bibtex",
-    "from_bibtex",
-    help="Import zotero library from a bibtex dump, the files fields in "
-    "the bibtex files should point to valid paths",
-    default=None,
-    type=click.Path(exists=True))
+@click.option("-f",
+              "--from-bibtex",
+              "from_bibtex",
+              help="Import Zotero library from a BibTeX dump, the files fields in "
+              "the BibTeX files should point to valid paths",
+              default=None,
+              type=click.Path(exists=True))
 @click.option("-s",
               "--from-sql",
               "--from-sql-folder",
@@ -57,19 +61,23 @@ def serve(address, port):
               required=True)
 @click.option("--link",
               help="Wether to link the pdf files or copy them",
-              default=None)
-def do_importer(from_bibtex, from_sql, outfolder, link):
-    """Import zotero libraries into papis libraries
-    """
+              is_flag=True,
+              default=False)
+def do_importer(from_bibtex: Optional[str],
+                from_sql: Optional[str],
+                outfolder: str,
+                link: bool) -> None:
+    """Import zotero libraries into papis libraries."""
     import papis_zotero.bibtex
     import papis_zotero.sql
+
     if not os.path.exists(outfolder):
         os.makedirs(outfolder)
+
     if from_bibtex is not None:
         papis_zotero.bibtex.add_from_bibtex(from_bibtex, outfolder, link)
     elif from_sql is not None:
         papis_zotero.sql.add_from_sql(from_sql, outfolder)
-
-
-if __name__ == "__main__":
-    main()
+    else:
+        logger.error("Either '--from-bibtex' or '--from-sql-folder' should be "
+                     "passed to import from Zotero.")
